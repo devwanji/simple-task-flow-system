@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,6 +65,7 @@ const Index = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session);
         setSession(session);
         setUser(session?.user ?? null);
       }
@@ -73,6 +73,7 @@ const Index = () => {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session);
       setSession(session);
       setUser(session?.user ?? null);
     });
@@ -84,13 +85,19 @@ const Index = () => {
   useEffect(() => {
     if (user && profiles.length > 0) {
       const profile = profiles.find(p => p.id === user.id);
+      console.log('Current profile:', profile);
       setCurrentProfile(profile || null);
     }
   }, [user, profiles]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success('Logged out successfully');
+    try {
+      await supabase.auth.signOut();
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Error logging out');
+    }
   };
 
   const handleAddUser = (e: React.FormEvent) => {
@@ -203,7 +210,7 @@ const Index = () => {
 
   // Show auth form if not authenticated
   if (!user || !session) {
-    return <AuthForm onAuthSuccess={() => {}} />;
+    return <AuthForm onAuthSuccess={() => console.log('Auth success')} />;
   }
 
   // Show loading while fetching data
@@ -266,7 +273,6 @@ const Index = () => {
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
 
-          {/* Dashboard */}
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
@@ -315,7 +321,6 @@ const Index = () => {
               </Card>
             </div>
 
-            {/* Recent Tasks */}
             <Card>
               <CardHeader>
                 <CardTitle>Recent Tasks</CardTitle>
@@ -347,7 +352,6 @@ const Index = () => {
             </Card>
           </TabsContent>
 
-          {/* Tasks */}
           <TabsContent value="tasks" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
@@ -491,7 +495,6 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          {/* Users (Admin only) */}
           {currentProfile.role === 'admin' && (
             <TabsContent value="users" className="space-y-6">
               <div className="flex justify-between items-center">
@@ -596,7 +599,6 @@ const Index = () => {
             </TabsContent>
           )}
 
-          {/* Notifications */}
           <TabsContent value="notifications" className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
             <div className="space-y-4">
