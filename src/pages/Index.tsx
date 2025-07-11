@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Users, 
   Plus, 
@@ -20,148 +18,148 @@ import {
   Clock, 
   Play, 
   User,
-  Settings,
-  Bell,
   LogOut,
-  Mail,
   UserPlus,
   ClipboardList,
-  AlertCircle
+  Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
+import AuthForm from "@/components/AuthForm";
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import type { Database } from "@/integrations/supabase/types";
 
-// Types
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'user';
-  createdAt: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  assignedTo: string;
-  assignedBy: string;
-  status: 'pending' | 'in-progress' | 'completed';
-  deadline: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Notification {
-  id: string;
-  userId: string;
-  taskId: string;
-  message: string;
-  createdAt: string;
-  read: boolean;
-}
+type Profile = Database['public']['Tables']['profiles']['Row'];
+type Task = Database['public']['Tables']['tasks']['Row'];
+type Notification = Database['public']['Tables']['notifications']['Row'];
 
 const Index = () => {
-  // State management
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-  const [users, setUsers] = useState<User[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const [userForm, setUserForm] = useState({ name: '', email: '', role: 'user' as 'admin' | 'user' });
-  const [taskForm, setTaskForm] = useState({ title: '', description: '', assignedTo: '', deadline: '' });
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', assigned_to: '', deadline: '' });
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Initialize demo data
+  const { 
+    profiles, 
+    tasks, 
+    notifications, 
+    loading,
+    addUser,
+    updateUser,
+    deleteUser,
+    addTask,
+    updateTask,
+    updateTaskStatus,
+    deleteTask 
+  } = useSupabaseData(user?.id);
+
+  // Set up auth state listener
   useEffect(() => {
-    const savedUsers = localStorage.getItem('taskUsers');
-    const savedTasks = localStorage.getItem('taskTasks');
-    const savedNotifications = localStorage.getItem('taskNotifications');
-    const savedCurrentUser = localStorage.getItem('taskCurrentUser');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
 
-    if (savedCurrentUser) {
-      setCurrentUser(JSON.parse(savedCurrentUser));
-    }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
 
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      const defaultUsers = [
-        {
-          id: '1',
-          name: 'Administrator',
-          email: 'admin@taskmanager.com',
-          role: 'admin' as const,
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: '2',
-          name: 'John Doe',
-          email: 'john@taskmanager.com',
-          role: 'user' as const,
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: '3',
-          name: 'Jane Smith',
-          email: 'jane@taskmanager.com',
-          role: 'user' as const,
-          createdAt: new Date().toISOString()
-        }
-      ];
-      setUsers(defaultUsers);
-      localStorage.setItem('taskUsers', JSON.stringify(defaultUsers));
-    }
-
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
-    } else {
-      const defaultTasks = [
-        {
-          id: '1',
-          title: 'Setup Development Environment',
-          description: 'Install necessary tools and configure the development environment for the new project.',
-          assignedTo: '2',
-          assignedBy: '1',
-          status: 'in-progress' as const,
-          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: '2',
-          title: 'Design Database Schema',
-          description: 'Create the database schema for the task management system.',
-          assignedTo: '3',
-          assignedBy: '1',
-          status: 'pending' as const,
-          deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ];
-      setTasks(defaultTasks);
-      localStorage.setItem('taskTasks', JSON.stringify(defaultTasks));
-    }
-
-    if (savedNotifications) {
-      setNotifications(JSON.parse(savedNotifications));
-    }
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Helper functions
-  const saveToStorage = () => {
-    localStorage.setItem('taskUsers', JSON.stringify(users));
-    localStorage.setItem('taskTasks', JSON.stringify(tasks));
-    localStorage.setItem('taskNotifications', JSON.stringify(notifications));
+  // Get current user profile
+  useEffect(() => {
+    if (user && profiles.length > 0) {
+      const profile = profiles.find(p => p.id === user.id);
+      setCurrentProfile(profile || null);
+    }
+  }, [user, profiles]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success('Logged out successfully');
   };
 
-  const generateId = () => Math.random().toString(36).substr(2, 9);
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    addUser(userForm);
+    setUserForm({ name: '', email: '', role: 'user' });
+    setShowUserDialog(false);
+  };
 
-  const getUserById = (id: string) => users.find(user => user.id === id);
+  const handleEditUser = (profile: Profile) => {
+    setEditingUser(profile);
+    setUserForm({
+      name: profile.name,
+      email: profile.email,
+      role: profile.role
+    });
+    setShowUserDialog(true);
+  };
+
+  const handleUpdateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingUser) {
+      updateUser(editingUser.id, userForm);
+      setEditingUser(null);
+      setUserForm({ name: '', email: '', role: 'user' });
+      setShowUserDialog(false);
+    }
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    deleteUser(userId);
+  };
+
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    addTask(taskForm);
+    setTaskForm({ title: '', description: '', assigned_to: '', deadline: '' });
+    setShowTaskDialog(false);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setTaskForm({
+      title: task.title,
+      description: task.description || '',
+      assigned_to: task.assigned_to || '',
+      deadline: task.deadline || ''
+    });
+    setShowTaskDialog(true);
+  };
+
+  const handleUpdateTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingTask) {
+      updateTask(editingTask.id, taskForm);
+      setEditingTask(null);
+      setTaskForm({ title: '', description: '', assigned_to: '', deadline: '' });
+      setShowTaskDialog(false);
+    }
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    deleteTask(taskId);
+  };
+
+  const handleUpdateTaskStatus = (taskId: string, status: 'pending' | 'in-progress' | 'completed') => {
+    updateTaskStatus(taskId, status);
+  };
+
+  // Helper functions
+  const getUserById = (id: string) => profiles.find(profile => profile.id === id);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -177,186 +175,20 @@ const Index = () => {
       case 'pending': return <Clock className="w-4 h-4" />;
       case 'in-progress': return <Play className="w-4 h-4" />;
       case 'completed': return <CheckCircle className="w-4 h-4" />;
-      default: return <AlertCircle className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
     }
   };
 
-  // Authentication
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const user = users.find(u => u.email === loginForm.email);
-    if (user) {
-      setCurrentUser(user);
-      localStorage.setItem('taskCurrentUser', JSON.stringify(user));
-      toast.success(`Welcome back, ${user.name}!`);
-      setLoginForm({ email: '', password: '' });
-    } else {
-      toast.error('Invalid credentials. Try admin@taskmanager.com or john@taskmanager.com');
-    }
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('taskCurrentUser');
-    toast.success('Logged out successfully');
-  };
-
-  // User management
-  const handleAddUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newUser: User = {
-      id: generateId(),
-      name: userForm.name,
-      email: userForm.email,
-      role: userForm.role,
-      createdAt: new Date().toISOString()
-    };
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    localStorage.setItem('taskUsers', JSON.stringify(updatedUsers));
-    setUserForm({ name: '', email: '', role: 'user' });
-    setShowUserDialog(false);
-    toast.success('User added successfully');
-  };
-
-  const handleEditUser = (user: User) => {
-    setEditingUser(user);
-    setUserForm({
-      name: user.name,
-      email: user.email,
-      role: user.role
-    });
-    setShowUserDialog(true);
-  };
-
-  const handleUpdateUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingUser) {
-      const updatedUsers = users.map(user =>
-        user.id === editingUser.id
-          ? { ...user, name: userForm.name, email: userForm.email, role: userForm.role }
-          : user
-      );
-      setUsers(updatedUsers);
-      localStorage.setItem('taskUsers', JSON.stringify(updatedUsers));
-      setEditingUser(null);
-      setUserForm({ name: '', email: '', role: 'user' });
-      setShowUserDialog(false);
-      toast.success('User updated successfully');
-    }
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    const updatedUsers = users.filter(user => user.id !== userId);
-    setUsers(updatedUsers);
-    localStorage.setItem('taskUsers', JSON.stringify(updatedUsers));
-    toast.success('User deleted successfully');
-  };
-
-  // Task management
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newTask: Task = {
-      id: generateId(),
-      title: taskForm.title,
-      description: taskForm.description,
-      assignedTo: taskForm.assignedTo,
-      assignedBy: currentUser!.id,
-      status: 'pending',
-      deadline: taskForm.deadline,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    const updatedTasks = [...tasks, newTask];
-    setTasks(updatedTasks);
-    localStorage.setItem('taskTasks', JSON.stringify(updatedTasks));
-
-    // Create notification
-    const notification: Notification = {
-      id: generateId(),
-      userId: taskForm.assignedTo,
-      taskId: newTask.id,
-      message: `New task assigned: ${taskForm.title}`,
-      createdAt: new Date().toISOString(),
-      read: false
-    };
-    
-    const updatedNotifications = [...notifications, notification];
-    setNotifications(updatedNotifications);
-    localStorage.setItem('taskNotifications', JSON.stringify(updatedNotifications));
-
-    setTaskForm({ title: '', description: '', assignedTo: '', deadline: '' });
-    setShowTaskDialog(false);
-    toast.success('Task assigned successfully');
-  };
-
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setTaskForm({
-      title: task.title,
-      description: task.description,
-      assignedTo: task.assignedTo,
-      deadline: task.deadline
-    });
-    setShowTaskDialog(true);
-  };
-
-  const handleUpdateTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingTask) {
-      const updatedTasks = tasks.map(task =>
-        task.id === editingTask.id
-          ? {
-              ...task,
-              title: taskForm.title,
-              description: taskForm.description,
-              assignedTo: taskForm.assignedTo,
-              deadline: taskForm.deadline,
-              updatedAt: new Date().toISOString()
-            }
-          : task
-      );
-      setTasks(updatedTasks);
-      localStorage.setItem('taskTasks', JSON.stringify(updatedTasks));
-      setEditingTask(null);
-      setTaskForm({ title: '', description: '', assignedTo: '', deadline: '' });
-      setShowTaskDialog(false);
-      toast.success('Task updated successfully');
-    }
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    const updatedTasks = tasks.filter(task => task.id !== taskId);
-    setTasks(updatedTasks);
-    localStorage.setItem('taskTasks', JSON.stringify(updatedTasks));
-    toast.success('Task deleted successfully');
-  };
-
-  const handleUpdateTaskStatus = (taskId: string, status: 'pending' | 'in-progress' | 'completed') => {
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId
-        ? { ...task, status, updatedAt: new Date().toISOString() }
-        : task
-    );
-    setTasks(updatedTasks);
-    localStorage.setItem('taskTasks', JSON.stringify(updatedTasks));
-    toast.success('Task status updated');
-  };
-
-  // Get user's tasks
   const getUserTasks = () => {
-    if (!currentUser) return [];
-    if (currentUser.role === 'admin') return tasks;
-    return tasks.filter(task => task.assignedTo === currentUser.id);
+    if (!currentProfile) return [];
+    if (currentProfile.role === 'admin') return tasks;
+    return tasks.filter(task => task.assigned_to === currentProfile.id);
   };
 
   const getUserNotifications = () => {
-    if (!currentUser) return [];
-    return notifications.filter(notif => notif.userId === currentUser.id && !notif.read);
+    return notifications.filter(notif => !notif.read);
   };
 
-  // Statistics
   const getStats = () => {
     const userTasks = getUserTasks();
     return {
@@ -367,54 +199,19 @@ const Index = () => {
     };
   };
 
-  // Login form
-  if (!currentUser) {
+  // Show auth form if not authenticated
+  if (!user || !session) {
+    return <AuthForm onAuthSuccess={() => {}} />;
+  }
+
+  // Show loading while fetching data
+  if (loading || !currentProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-        <Card className="w-full max-w-md shadow-xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
-              <ClipboardList className="w-8 h-8 text-blue-600" />
-              Task Manager
-            </CardTitle>
-            <CardDescription>Sign in to your account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                  placeholder="admin@taskmanager.com"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  placeholder="Any password works"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Sign In
-              </Button>
-            </form>
-            <Alert className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Demo accounts: admin@taskmanager.com (Admin) or john@taskmanager.com (User)
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <ClipboardList className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-500">Loading your tasks...</p>
+        </div>
       </div>
     );
   }
@@ -445,9 +242,9 @@ const Index = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <User className="w-5 h-5 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">{currentUser.name}</span>
-                <Badge variant={currentUser.role === 'admin' ? 'default' : 'secondary'}>
-                  {currentUser.role}
+                <span className="text-sm font-medium text-gray-700">{currentProfile.name}</span>
+                <Badge variant={currentProfile.role === 'admin' ? 'default' : 'secondary'}>
+                  {currentProfile.role}
                 </Badge>
               </div>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -463,7 +260,7 @@ const Index = () => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            {currentUser.role === 'admin' && <TabsTrigger value="users">Users</TabsTrigger>}
+            {currentProfile.role === 'admin' && <TabsTrigger value="users">Users</TabsTrigger>}
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
 
@@ -530,7 +327,7 @@ const Index = () => {
                         <h3 className="font-medium text-gray-900">{task.title}</h3>
                         <p className="text-sm text-gray-500 mt-1">{task.description}</p>
                         <p className="text-xs text-gray-400 mt-1">
-                          Due: {new Date(task.deadline).toLocaleDateString()}
+                          Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -552,12 +349,12 @@ const Index = () => {
           <TabsContent value="tasks" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
-              {currentUser.role === 'admin' && (
+              {currentProfile.role === 'admin' && (
                 <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
                   <DialogTrigger asChild>
                     <Button onClick={() => {
                       setEditingTask(null);
-                      setTaskForm({ title: '', description: '', assignedTo: '', deadline: '' });
+                      setTaskForm({ title: '', description: '', assigned_to: '', deadline: '' });
                     }}>
                       <Plus className="w-4 h-4 mr-2" />
                       Add Task
@@ -586,19 +383,18 @@ const Index = () => {
                           id="description"
                           value={taskForm.description}
                           onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
-                          required
                         />
                       </div>
                       <div>
                         <Label htmlFor="assignedTo">Assign To</Label>
-                        <Select value={taskForm.assignedTo} onValueChange={(value) => setTaskForm({ ...taskForm, assignedTo: value })}>
+                        <Select value={taskForm.assigned_to} onValueChange={(value) => setTaskForm({ ...taskForm, assigned_to: value })}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select user" />
                           </SelectTrigger>
                           <SelectContent>
-                            {users.filter(user => user.role === 'user').map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.name} ({user.email})
+                            {profiles.filter(profile => profile.role === 'user').map((profile) => (
+                              <SelectItem key={profile.id} value={profile.id}>
+                                {profile.name} ({profile.email})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -611,7 +407,6 @@ const Index = () => {
                           type="date"
                           value={taskForm.deadline}
                           onChange={(e) => setTaskForm({ ...taskForm, deadline: e.target.value })}
-                          required
                         />
                       </div>
                       <Button type="submit" className="w-full">
@@ -642,16 +437,16 @@ const Index = () => {
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <div className="flex items-center space-x-1">
                             <User className="w-4 h-4" />
-                            <span>Assigned to: {getUserById(task.assignedTo)?.name}</span>
+                            <span>Assigned to: {getUserById(task.assigned_to || '')?.name || 'Unassigned'}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Calendar className="w-4 h-4" />
-                            <span>Due: {new Date(task.deadline).toLocaleDateString()}</span>
+                            <span>Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        {currentUser.role === 'user' && task.assignedTo === currentUser.id && (
+                        {currentProfile.role === 'user' && task.assigned_to === currentProfile.id && (
                           <Select
                             value={task.status}
                             onValueChange={(value: 'pending' | 'in-progress' | 'completed') => 
@@ -668,7 +463,7 @@ const Index = () => {
                             </SelectContent>
                           </Select>
                         )}
-                        {currentUser.role === 'admin' && (
+                        {currentProfile.role === 'admin' && (
                           <>
                             <Button
                               variant="ghost"
@@ -695,7 +490,7 @@ const Index = () => {
           </TabsContent>
 
           {/* Users (Admin only) */}
-          {currentUser.role === 'admin' && (
+          {currentProfile.role === 'admin' && (
             <TabsContent value="users" className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-900">Users</h2>
@@ -757,8 +552,8 @@ const Index = () => {
               </div>
 
               <div className="grid gap-4">
-                {users.map((user) => (
-                  <Card key={user.id}>
+                {profiles.map((profile) => (
+                  <Card key={profile.id}>
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
@@ -766,26 +561,26 @@ const Index = () => {
                             <User className="w-5 h-5 text-blue-600" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">{user.name}</h3>
-                            <p className="text-sm text-gray-500">{user.email}</p>
+                            <h3 className="font-semibold text-gray-900">{profile.name}</h3>
+                            <p className="text-sm text-gray-500">{profile.email}</p>
                           </div>
-                          <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                            {user.role}
+                          <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
+                            {profile.role}
                           </Badge>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEditUser(user)}
+                            onClick={() => handleEditUser(profile)}
                           >
                             <Edit3 className="w-4 h-4" />
                           </Button>
-                          {user.id !== currentUser.id && (
+                          {profile.id !== currentProfile.id && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteUser(user.id)}
+                              onClick={() => handleDeleteUser(profile.id)}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -819,7 +614,7 @@ const Index = () => {
                         <div className="flex-1">
                           <p className="text-gray-900">{notification.message}</p>
                           <p className="text-sm text-gray-500 mt-1">
-                            {new Date(notification.createdAt).toLocaleString()}
+                            {new Date(notification.created_at).toLocaleString()}
                           </p>
                         </div>
                       </div>
