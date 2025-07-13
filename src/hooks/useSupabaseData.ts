@@ -123,7 +123,41 @@ export const useSupabaseData = (userId: string | undefined) => {
       if (error) throw error;
 
       setTasks([...tasks, data]);
-      toast.success('Task created successfully');
+
+      // Send email notification to assigned user
+      try {
+        const assignedUser = profiles.find(p => p.id === taskData.assigned_to);
+        const assignedByUser = profiles.find(p => p.id === userId);
+        
+        if (assignedUser && assignedByUser) {
+          console.log("Sending email notification for task assignment");
+          
+          const emailResponse = await supabase.functions.invoke('send-task-email', {
+            body: {
+              assignedToEmail: assignedUser.email,
+              assignedToName: assignedUser.name,
+              taskTitle: taskData.title,
+              taskDescription: taskData.description,
+              deadline: taskData.deadline,
+              assignedByName: assignedByUser.name,
+            },
+          });
+
+          if (emailResponse.error) {
+            console.error('Email sending error:', emailResponse.error);
+            // Don't fail the task creation if email fails
+            toast.success('Task created successfully (email notification failed)');
+          } else {
+            console.log('Email sent successfully');
+            toast.success('Task created and email notification sent');
+          }
+        } else {
+          toast.success('Task created successfully');
+        }
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        toast.success('Task created successfully (email notification failed)');
+      }
     } catch (error: any) {
       console.error('Error adding task:', error);
       toast.error('Failed to create task');
