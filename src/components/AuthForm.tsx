@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipboardList, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { ClipboardList, Mail, Lock, User, AlertCircle, Shield } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 
@@ -111,6 +111,16 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAdminLogin = () => {
+    setFormData({
+      ...formData,
+      email: 'admin@taskmanager.com',
+      password: 'admin123'
+    });
+    setActiveTab('signin');
+    toast.info('Admin credentials filled. Click Sign In to access admin panel.');
   };
 
   return (
@@ -254,12 +264,35 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
               </TabsContent>
             </Tabs>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-start space-x-2">
-                <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-medium mb-1">Demo Account:</p>
-                  <p>Create an admin account first to manage users and tasks effectively.</p>
+            <div className="mt-6 space-y-4">
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-start space-x-2">
+                  <Shield className="w-5 h-5 text-red-600 mt-0.5" />
+                  <div className="text-sm text-red-800">
+                    <p className="font-medium mb-2">Admin Access:</p>
+                    <div className="space-y-1">
+                      <p><strong>Email:</strong> admin@taskmanager.com</p>
+                      <p><strong>Password:</strong> admin123</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 text-red-700 border-red-300 hover:bg-red-100"
+                      onClick={handleAdminLogin}
+                    >
+                      Use Admin Credentials
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Regular Users:</p>
+                    <p>Create your own account using the Sign Up tab above.</p>
+                  </div>
                 </div>
               </div>
             </div>
