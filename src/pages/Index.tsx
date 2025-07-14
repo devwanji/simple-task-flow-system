@@ -266,90 +266,213 @@ const Index = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsList className={`grid w-full ${currentProfile.role === 'admin' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            <TabsTrigger value="dashboard">
+              {currentProfile.role === 'admin' ? 'Admin Dashboard' : 'Dashboard'}
+            </TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            {currentProfile.role === 'admin' && <TabsTrigger value="users">Users</TabsTrigger>}
+            {currentProfile.role === 'admin' && <TabsTrigger value="users">User Management</TabsTrigger>}
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total Tasks</p>
-                      <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                    </div>
-                    <ClipboardList className="w-8 h-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Pending</p>
-                      <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                    </div>
-                    <Clock className="w-8 h-8 text-yellow-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">In Progress</p>
-                      <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
-                    </div>
-                    <Play className="w-8 h-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Completed</p>
-                      <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-                    </div>
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Tasks</CardTitle>
-                <CardDescription>Your latest task assignments</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {getUserTasks().slice(0, 5).map((task) => (
-                    <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">{task.title}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{task.description}</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
-                        </p>
+            {currentProfile.role === 'admin' ? (
+              // Admin Dashboard
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Total Users</p>
+                          <p className="text-2xl font-bold text-gray-900">{profiles.length}</p>
+                        </div>
+                        <Users className="w-8 h-8 text-purple-600" />
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getStatusColor(task.status)}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(task.status)}
-                            <span className="capitalize">{task.status.replace('-', ' ')}</span>
-                          </div>
-                        </Badge>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Total Tasks</p>
+                          <p className="text-2xl font-bold text-gray-900">{tasks.length}</p>
+                        </div>
+                        <ClipboardList className="w-8 h-8 text-blue-600" />
                       </div>
-                    </div>
-                  ))}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Pending</p>
+                          <p className="text-2xl font-bold text-yellow-600">{tasks.filter(t => t.status === 'pending').length}</p>
+                        </div>
+                        <Clock className="w-8 h-8 text-yellow-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">In Progress</p>
+                          <p className="text-2xl font-bold text-blue-600">{tasks.filter(t => t.status === 'in-progress').length}</p>
+                        </div>
+                        <Play className="w-8 h-8 text-blue-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Completed</p>
+                          <p className="text-2xl font-bold text-green-600">{tasks.filter(t => t.status === 'completed').length}</p>
+                        </div>
+                        <CheckCircle className="w-8 h-8 text-green-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Tasks</CardTitle>
+                      <CardDescription>All system tasks overview</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {tasks.slice(0, 5).map((task) => (
+                          <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div className="flex-1">
+                              <h3 className="font-medium text-gray-900">{task.title}</h3>
+                              <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                Assigned to: {getUserById(task.assigned_to || '')?.name || 'Unassigned'}
+                              </p>
+                            </div>
+                            <Badge className={getStatusColor(task.status)}>
+                              <div className="flex items-center space-x-1">
+                                {getStatusIcon(task.status)}
+                                <span className="capitalize">{task.status.replace('-', ' ')}</span>
+                              </div>
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Active Users</CardTitle>
+                      <CardDescription>System users overview</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {profiles.slice(0, 5).map((profile) => (
+                          <div key={profile.id} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <User className="w-8 h-8 text-gray-400" />
+                              <div>
+                                <h3 className="font-medium text-gray-900">{profile.name}</h3>
+                                <p className="text-sm text-gray-500">{profile.email}</p>
+                              </div>
+                            </div>
+                            <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
+                              {profile.role}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            ) : (
+              // User Dashboard
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">My Tasks</p>
+                          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                        </div>
+                        <ClipboardList className="w-8 h-8 text-blue-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Pending</p>
+                          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                        </div>
+                        <Clock className="w-8 h-8 text-yellow-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">In Progress</p>
+                          <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
+                        </div>
+                        <Play className="w-8 h-8 text-blue-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Completed</p>
+                          <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+                        </div>
+                        <CheckCircle className="w-8 h-8 text-green-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>My Recent Tasks</CardTitle>
+                    <CardDescription>Your latest task assignments</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {getUserTasks().slice(0, 5).map((task) => (
+                        <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-900">{task.title}</h3>
+                            <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={getStatusColor(task.status)}>
+                              <div className="flex items-center space-x-1">
+                                {getStatusIcon(task.status)}
+                                <span className="capitalize">{task.status.replace('-', ' ')}</span>
+                              </div>
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="tasks" className="space-y-6">
@@ -398,9 +521,9 @@ const Index = () => {
                             <SelectValue placeholder="Select user" />
                           </SelectTrigger>
                           <SelectContent>
-                            {profiles.filter(profile => profile.role === 'user').map((profile) => (
+                            {profiles.map((profile) => (
                               <SelectItem key={profile.id} value={profile.id}>
-                                {profile.name} ({profile.email})
+                                {profile.name} ({profile.email}) - {profile.role}
                               </SelectItem>
                             ))}
                           </SelectContent>
