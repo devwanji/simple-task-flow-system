@@ -35,23 +35,68 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
+      // Special handling for admin login - create admin user if doesn't exist
+      if (formData.email === 'admin@taskmanager.com' && formData.password === 'admin123') {
+        // Try to sign in first
+        let { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
 
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          toast.error('Invalid email or password. Please check your credentials.');
-        } else {
-          toast.error(error.message);
+        // If user doesn't exist, create the admin user
+        if (error && error.message.includes('Invalid login credentials')) {
+          console.log('Admin user does not exist, creating...');
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: 'admin@taskmanager.com',
+            password: 'admin123',
+            options: {
+              data: {
+                name: 'System Administrator',
+              }
+            }
+          });
+
+          if (signUpError) {
+            console.error('Error creating admin user:', signUpError);
+            throw signUpError;
+          }
+
+          // Now try to sign in again
+          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+            email: formData.email,
+            password: formData.password,
+          });
+
+          if (retryError) throw retryError;
+          data = retryData;
+        } else if (error) {
+          throw error;
         }
-        return;
-      }
 
-      if (data.user) {
-        toast.success('Successfully signed in!');
-        onAuthSuccess();
+        if (data.user) {
+          toast.success('Successfully signed in as admin!');
+          onAuthSuccess();
+        }
+      } else {
+        // Regular user login
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            toast.error('Invalid email or password. Please check your credentials.');
+          } else {
+            toast.error(error.message);
+          }
+          return;
+        }
+
+        if (data.user) {
+          toast.success('Successfully signed in!');
+          onAuthSuccess();
+        }
       }
     } catch (error: any) {
       console.error('Sign in error:', error);
