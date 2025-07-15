@@ -53,15 +53,39 @@ export const useSupabaseData = (userId: string | undefined) => {
     }
   };
 
-  // Add user
+  // Add user - creates auth user and profile
   const addUser = async (userData: { name: string; email: string; role: 'admin' | 'user' }) => {
     try {
-      // Note: In a real app, admin users would be created through Supabase Auth
-      // For now, we'll just show this functionality in the UI
-      toast.info('User creation requires Supabase Auth setup');
+      // Generate temporary password for new user
+      const tempPassword = `temp${Math.random().toString(36).substring(2, 15)}`;
+      
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        password: tempPassword,
+        email_confirm: true
+      });
+
+      if (authError) throw authError;
+
+      // Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role
+        });
+
+      if (profileError) throw profileError;
+
+      // Refresh data to include new user
+      await fetchData();
+      toast.success(`User created successfully. Temporary password: ${tempPassword}`);
     } catch (error: any) {
       console.error('Error adding user:', error);
-      toast.error('Failed to add user');
+      toast.error('Failed to add user: ' + error.message);
     }
   };
 
