@@ -277,81 +277,137 @@ const Index = () => {
 
           <TabsContent value="dashboard" className="space-y-6">
             {currentProfile.role === 'admin' ? (
-              // Admin Dashboard
+              // Admin Dashboard - System Management Overview
               <>
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg mb-6">
+                  <h2 className="text-2xl font-bold mb-2">Admin Control Panel</h2>
+                  <p className="text-blue-100">System overview and management tools</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                  <Card>
+                  <Card className="border-l-4 border-l-purple-500">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-gray-600">Total Users</p>
-                          <p className="text-2xl font-bold text-gray-900">{profiles.length}</p>
+                          <p className="text-3xl font-bold text-purple-600">{profiles.length}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {profiles.filter(p => p.role === 'admin').length} admins, {profiles.filter(p => p.role === 'user').length} users
+                          </p>
                         </div>
-                        <Users className="w-8 h-8 text-purple-600" />
+                        <Users className="w-10 h-10 text-purple-600" />
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="border-l-4 border-l-blue-500">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-gray-600">Total Tasks</p>
-                          <p className="text-2xl font-bold text-gray-900">{tasks.length}</p>
+                          <p className="text-3xl font-bold text-blue-600">{tasks.length}</p>
+                          <p className="text-xs text-gray-500 mt-1">System-wide task count</p>
                         </div>
-                        <ClipboardList className="w-8 h-8 text-blue-600" />
+                        <ClipboardList className="w-10 h-10 text-blue-600" />
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="border-l-4 border-l-yellow-500">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-600">Pending</p>
-                          <p className="text-2xl font-bold text-yellow-600">{tasks.filter(t => t.status === 'pending').length}</p>
+                          <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
+                          <p className="text-3xl font-bold text-yellow-600">{tasks.filter(t => t.status === 'pending').length}</p>
+                          <p className="text-xs text-gray-500 mt-1">Require attention</p>
                         </div>
-                        <Clock className="w-8 h-8 text-yellow-600" />
+                        <Clock className="w-10 h-10 text-yellow-600" />
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="border-l-4 border-l-orange-500">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-gray-600">In Progress</p>
-                          <p className="text-2xl font-bold text-blue-600">{tasks.filter(t => t.status === 'in-progress').length}</p>
+                          <p className="text-3xl font-bold text-orange-600">{tasks.filter(t => t.status === 'in-progress').length}</p>
+                          <p className="text-xs text-gray-500 mt-1">Active work items</p>
                         </div>
-                        <Play className="w-8 h-8 text-blue-600" />
+                        <Play className="w-10 h-10 text-orange-600" />
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="border-l-4 border-l-green-500">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-gray-600">Completed</p>
-                          <p className="text-2xl font-bold text-green-600">{tasks.filter(t => t.status === 'completed').length}</p>
+                          <p className="text-3xl font-bold text-green-600">{tasks.filter(t => t.status === 'completed').length}</p>
+                          <p className="text-xs text-gray-500 mt-1">Success rate: {tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0}%</p>
                         </div>
-                        <CheckCircle className="w-8 h-8 text-green-600" />
+                        <CheckCircle className="w-10 h-10 text-green-600" />
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
+                {/* Quick Actions Panel */}
+                <Card className="bg-gradient-to-r from-gray-50 to-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-xl">Quick Actions</CardTitle>
+                    <CardDescription>Administrative shortcuts</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Button 
+                        onClick={() => {
+                          setEditingUser(null);
+                          setUserForm({ name: '', email: '', role: 'user' });
+                          setShowUserDialog(true);
+                        }}
+                        className="h-20 flex-col space-y-2"
+                      >
+                        <UserPlus className="w-6 h-6" />
+                        <span>Add New User</span>
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          setEditingTask(null);
+                          setTaskForm({ title: '', description: '', assigned_to: '', deadline: '' });
+                          setShowTaskDialog(true);
+                        }}
+                        className="h-20 flex-col space-y-2"
+                        variant="outline"
+                      >
+                        <Plus className="w-6 h-6" />
+                        <span>Create Task</span>
+                      </Button>
+                      <Button 
+                        onClick={() => setActiveTab('users')}
+                        className="h-20 flex-col space-y-2"
+                        variant="outline"
+                      >
+                        <Users className="w-6 h-6" />
+                        <span>Manage Users</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Recent Tasks</CardTitle>
-                      <CardDescription>All system tasks overview</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-lg">Recent System Activity</CardTitle>
+                      <ClipboardList className="w-5 h-5 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
                         {tasks.slice(0, 5).map((task) => (
-                          <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                             <div className="flex-1">
                               <h3 className="font-medium text-gray-900">{task.title}</h3>
-                              <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                              <p className="text-sm text-gray-500 mt-1 line-clamp-1">{task.description}</p>
                               <p className="text-xs text-gray-400 mt-1">
-                                Assigned to: {getUserById(task.assigned_to || '')?.name || 'Unassigned'}
+                                👤 {getUserById(task.assigned_to || '')?.name || 'Unassigned'} • 
+                                📅 {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
                               </p>
                             </div>
                             <Badge className={getStatusColor(task.status)}>
@@ -362,35 +418,96 @@ const Index = () => {
                             </Badge>
                           </div>
                         ))}
+                        <Button 
+                          variant="ghost" 
+                          className="w-full mt-4"
+                          onClick={() => setActiveTab('tasks')}
+                        >
+                          View All Tasks →
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Active Users</CardTitle>
-                      <CardDescription>System users overview</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-lg">User Management</CardTitle>
+                      <Users className="w-5 h-5 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
                         {profiles.slice(0, 5).map((profile) => (
-                          <div key={profile.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div key={profile.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                             <div className="flex items-center space-x-3">
-                              <User className="w-8 h-8 text-gray-400" />
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                profile.role === 'admin' ? 'bg-purple-100' : 'bg-blue-100'
+                              }`}>
+                                <User className={`w-5 h-5 ${
+                                  profile.role === 'admin' ? 'text-purple-600' : 'text-blue-600'
+                                }`} />
+                              </div>
                               <div>
                                 <h3 className="font-medium text-gray-900">{profile.name}</h3>
                                 <p className="text-sm text-gray-500">{profile.email}</p>
+                                <p className="text-xs text-gray-400">
+                                  Tasks: {tasks.filter(t => t.assigned_to === profile.id).length}
+                                </p>
                               </div>
                             </div>
-                            <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
-                              {profile.role}
-                            </Badge>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
+                                {profile.role}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditUser(profile)}
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
+                        <Button 
+                          variant="ghost" 
+                          className="w-full mt-4"
+                          onClick={() => setActiveTab('users')}
+                        >
+                          Manage All Users →
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* System Notifications */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">System Notifications & Alerts</CardTitle>
+                    <CardDescription>Recent system activity and important updates</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {notifications.slice(0, 3).map((notification) => (
+                        <div key={notification.id} className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                          <Bell className="w-5 h-5 text-blue-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{notification.message}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(notification.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {notifications.length === 0 && (
+                        <div className="text-center py-6 text-gray-500">
+                          <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                          <p>No recent notifications</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             ) : (
               // User Dashboard
