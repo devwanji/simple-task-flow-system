@@ -53,9 +53,36 @@ export const useSupabaseData = (userId: string | undefined) => {
     }
   };
 
-  // Add user - creates auth user and profile
+  // Verify admin role from database
+  const verifyAdminRole = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error verifying admin role:', error);
+        return false;
+      }
+      
+      return data?.role === 'admin';
+    } catch (error) {
+      console.error('Admin verification error:', error);
+      return false;
+    }
+  };
+
+  // Add user - creates auth user and profile (Admin only)
   const addUser = async (userData: { name: string; email: string; role: 'admin' | 'user' }) => {
     try {
+      // Verify admin role before proceeding
+      if (!userId || !(await verifyAdminRole(userId))) {
+        toast.error('Unauthorized: Admin access required');
+        return;
+      }
+
       // Generate temporary password for new user
       const tempPassword = `temp${Math.random().toString(36).substring(2, 15)}`;
       
@@ -89,9 +116,14 @@ export const useSupabaseData = (userId: string | undefined) => {
     }
   };
 
-  // Update user
+  // Update user (Admin only)
   const updateUser = async (id: string, userData: { name: string; email: string; role: 'admin' | 'user' }) => {
     try {
+      // Verify admin role before proceeding
+      if (!userId || !(await verifyAdminRole(userId))) {
+        toast.error('Unauthorized: Admin access required');
+        return;
+      }
       const { error } = await supabase
         .from('profiles')
         .update(userData)
@@ -109,9 +141,14 @@ export const useSupabaseData = (userId: string | undefined) => {
     }
   };
 
-  // Delete user
+  // Delete user (Admin only)
   const deleteUser = async (id: string) => {
     try {
+      // Verify admin role before proceeding
+      if (!userId || !(await verifyAdminRole(userId))) {
+        toast.error('Unauthorized: Admin access required');
+        return;
+      }
       const { error } = await supabase
         .from('profiles')
         .delete()
@@ -127,7 +164,7 @@ export const useSupabaseData = (userId: string | undefined) => {
     }
   };
 
-  // Add task
+  // Add task (Admin only)
   const addTask = async (taskData: { 
     title: string; 
     description: string; 
@@ -135,6 +172,11 @@ export const useSupabaseData = (userId: string | undefined) => {
     deadline: string; 
   }) => {
     try {
+      // Verify admin role before proceeding
+      if (!userId || !(await verifyAdminRole(userId))) {
+        toast.error('Unauthorized: Admin access required');
+        return;
+      }
       const { data, error } = await supabase
         .from('tasks')
         .insert({
@@ -188,7 +230,7 @@ export const useSupabaseData = (userId: string | undefined) => {
     }
   };
 
-  // Update task
+  // Update task (Admin only)
   const updateTask = async (id: string, taskData: { 
     title: string; 
     description: string; 
@@ -196,6 +238,11 @@ export const useSupabaseData = (userId: string | undefined) => {
     deadline: string; 
   }) => {
     try {
+      // Verify admin role before proceeding
+      if (!userId || !(await verifyAdminRole(userId))) {
+        toast.error('Unauthorized: Admin access required');
+        return;
+      }
       const { error } = await supabase
         .from('tasks')
         .update(taskData)
@@ -233,9 +280,14 @@ export const useSupabaseData = (userId: string | undefined) => {
     }
   };
 
-  // Delete task
+  // Delete task (Admin only)
   const deleteTask = async (id: string) => {
     try {
+      // Verify admin role before proceeding
+      if (!userId || !(await verifyAdminRole(userId))) {
+        toast.error('Unauthorized: Admin access required');
+        return;
+      }
       const { error } = await supabase
         .from('tasks')
         .delete()

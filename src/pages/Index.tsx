@@ -81,12 +81,36 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Get current user profile
+  // Get current user profile with additional admin verification
   useEffect(() => {
     if (user && profiles.length > 0) {
       const profile = profiles.find(p => p.id === user.id);
       console.log('Current profile:', profile);
-      setCurrentProfile(profile || null);
+      
+      // Additional security: Verify admin role from database
+      if (profile?.role === 'admin') {
+        // Re-verify admin status from database to prevent client-side manipulation
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('Error verifying admin role:', error);
+              setCurrentProfile(profile);
+            } else if (data?.role === 'admin') {
+              console.log('Admin role verified from database');
+              setCurrentProfile(profile);
+            } else {
+              console.warn('Admin role verification failed - role mismatch');
+              // Force refresh profile data if there's a mismatch
+              setCurrentProfile({ ...profile, role: data?.role || 'user' });
+            }
+          });
+      } else {
+        setCurrentProfile(profile || null);
+      }
     }
   }, [user, profiles]);
 
@@ -100,67 +124,103 @@ const Index = () => {
     }
   };
 
+  // Admin verification helper function
+  const isVerifiedAdmin = () => {
+    return currentProfile?.role === 'admin' && user?.id === currentProfile?.id;
+  };
+
+  // Protected admin action wrapper
+  const executeAdminAction = (action: () => void) => {
+    if (!isVerifiedAdmin()) {
+      toast.error('Unauthorized: Admin access required');
+      console.error('Unauthorized admin action attempted by:', user?.email);
+      return;
+    }
+    action();
+  };
+
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    addUser(userForm);
-    setUserForm({ name: '', email: '', role: 'user' });
-    setShowUserDialog(false);
+    executeAdminAction(() => {
+      addUser(userForm);
+      setUserForm({ name: '', email: '', role: 'user' });
+      setShowUserDialog(false);
+    });
   };
 
   const handleEditUser = (profile: Profile) => {
-    setEditingUser(profile);
-    setUserForm({
-      name: profile.name,
-      email: profile.email,
-      role: profile.role
+    executeAdminAction(() => {
+      setEditingUser(profile);
+      setUserForm({
+        name: profile.name,
+        email: profile.email,
+        role: profile.role
+      });
+      setShowUserDialog(true);
     });
-    setShowUserDialog(true);
   };
 
   const handleUpdateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingUser) {
-      updateUser(editingUser.id, userForm);
-      setEditingUser(null);
-      setUserForm({ name: '', email: '', role: 'user' });
-      setShowUserDialog(false);
-    }
+    executeAdminAction(() => {
+      if (editingUser) {
+        updateUser(editingUser.id, userForm);
+        setEditingUser(null);
+        setUserForm({ name: '', email: '', role: 'user' });
+        setShowUserDialog(false);
+      }
+    });
   };
 
   const handleDeleteUser = (userId: string) => {
-    deleteUser(userId);
+    executeAdminAction(() => {
+      // Prevent admin from deleting their own account
+      if (userId === currentProfile?.id) {
+        toast.error('Cannot delete your own admin account');
+        return;
+      }
+      deleteUser(userId);
+    });
   };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
-    addTask(taskForm);
-    setTaskForm({ title: '', description: '', assigned_to: '', deadline: '' });
-    setShowTaskDialog(false);
+    executeAdminAction(() => {
+      addTask(taskForm);
+      setTaskForm({ title: '', description: '', assigned_to: '', deadline: '' });
+      setShowTaskDialog(false);
+    });
   };
 
   const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setTaskForm({
-      title: task.title,
-      description: task.description || '',
-      assigned_to: task.assigned_to || '',
-      deadline: task.deadline || ''
+    executeAdminAction(() => {
+      setEditingTask(task);
+      setTaskForm({
+        title: task.title,
+        description: task.description || '',
+        assigned_to: task.assigned_to || '',
+        deadline: task.deadline || ''
+      });
+      setShowTaskDialog(true);
     });
-    setShowTaskDialog(true);
   };
 
   const handleUpdateTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingTask) {
-      updateTask(editingTask.id, taskForm);
-      setEditingTask(null);
-      setTaskForm({ title: '', description: '', assigned_to: '', deadline: '' });
-      setShowTaskDialog(false);
-    }
+    executeAdminAction(() => {
+      if (editingTask) {
+        updateTask(editingTask.id, taskForm);
+        setEditingTask(null);
+        setTaskForm({ title: '', description: '', assigned_to: '', deadline: '' });
+        setShowTaskDialog(false);
+      }
+    });
   };
 
   const handleDeleteTask = (taskId: string) => {
-    deleteTask(taskId);
+    executeAdminAction(() => {
+      deleteTask(taskId);
+    });
   };
 
   const handleUpdateTaskStatus = (taskId: string, status: 'pending' | 'in-progress' | 'completed') => {
@@ -266,17 +326,17 @@ const Index = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${currentProfile.role === 'admin' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full ${isVerifiedAdmin() ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="dashboard">
-              {currentProfile.role === 'admin' ? 'Admin Dashboard' : 'Dashboard'}
+              {isVerifiedAdmin() ? 'Admin Dashboard' : 'Dashboard'}
             </TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            {currentProfile.role === 'admin' && <TabsTrigger value="users">User Management</TabsTrigger>}
+            {isVerifiedAdmin() && <TabsTrigger value="users">User Management</TabsTrigger>}
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            {currentProfile.role === 'admin' ? (
+            {isVerifiedAdmin() ? (
               // Admin Dashboard - System Management Overview
               <>
                 <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg mb-6">
@@ -735,7 +795,7 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          {currentProfile.role === 'admin' && (
+          {isVerifiedAdmin() && (
             <TabsContent value="users" className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-900">Users</h2>
